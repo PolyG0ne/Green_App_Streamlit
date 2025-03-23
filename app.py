@@ -305,7 +305,7 @@ elif nav_option == "Ajouter une Plante":
     
     with st.form("plant_form"):
         # Champs du formulaire
-        name = st.text_input("Nom de la Plante", required=True)
+        name = st.text_input("Nom de la Plante *")
         variety = st.text_input("Variété")
         
         container = st.selectbox(
@@ -327,32 +327,36 @@ elif nav_option == "Ajouter une Plante":
         submitted = st.form_submit_button("Ajouter la Plante")
         
         if submitted:
-            # Convertir la date en string
-            date_str = date.strftime('%Y-%m-%d')
+            # Validation manuelle des champs requis
+            if not name:
+                st.error("Le nom de la plante est obligatoire.")
+            else:
+                # Convertir la date en string
+                date_str = date.strftime('%Y-%m-%d')
+                
+                # Gérer l'image
+                image = handle_image_upload(uploaded_file)
+                
+                # Créer l'objet plante
+                plant = {
+                    'id': generate_unique_id(),
+                    'name': name,
+                    'variety': variety,
+                    'container': container,
+                    'soil': soil,
+                    'date': date_str,
+                    'location': location,
+                    'notes': plant_notes,
+                    'image': image
+                }
             
-            # Gérer l'image
-            image = handle_image_upload(uploaded_file)
-            
-            # Créer l'objet plante
-            plant = {
-                'id': generate_unique_id(),
-                'name': name,
-                'variety': variety,
-                'container': container,
-                'soil': soil,
-                'date': date_str,
-                'location': location,
-                'notes': plant_notes,
-                'image': image
-            }
-            
-            # Ajouter la plante à la liste
-            st.session_state['plants'].append(plant)
-            
-            # Sauvegarder les données
-            save_data(st.session_state['plants'], st.session_state['notes'])
-            
-            st.success(f"Plante {name} ajoutée avec succès !")
+                # Ajouter la plante à la liste
+                st.session_state['plants'].append(plant)
+                
+                # Sauvegarder les données
+                save_data(st.session_state['plants'], st.session_state['notes'])
+                
+                st.success(f"Plante {name} ajoutée avec succès !")
             
             # Option pour ajouter une autre plante ou retourner à la liste
             if st.button("Voir la liste des plantes"):
@@ -395,7 +399,7 @@ elif nav_option == "Notes":
     else:
         with st.form("note_form"):
             date = st.date_input("Date", datetime.now())
-            content = st.text_area("Observation", required=True)
+            content = st.text_area("Observation *")
             
             col1, col2 = st.columns(2)
             with col1:
@@ -411,30 +415,34 @@ elif nav_option == "Notes":
             submitted = st.form_submit_button("Ajouter l'Observation")
             
             if submitted:
-                # Convertir la date en string
-                date_str = date.strftime('%Y-%m-%d')
+                # Validation manuelle des champs requis
+                if not content:
+                    st.error("L'observation est obligatoire.")
+                else:
+                    # Convertir la date en string
+                    date_str = date.strftime('%Y-%m-%d')
+                    
+                    # Gérer l'image
+                    image = handle_image_upload(uploaded_file)
+                    
+                    # Créer l'objet note
+                    note = {
+                        'id': generate_unique_id(),
+                        'plantId': selected_plant_id,
+                        'date': date_str,
+                        'content': content,
+                        'height': height if height > 0 else None,
+                        'leaves': leaves if leaves > 0 else None,
+                        'image': image
+                    }
                 
-                # Gérer l'image
-                image = handle_image_upload(uploaded_file)
-                
-                # Créer l'objet note
-                note = {
-                    'id': generate_unique_id(),
-                    'plantId': selected_plant_id,
-                    'date': date_str,
-                    'content': content,
-                    'height': height if height > 0 else None,
-                    'leaves': leaves if leaves > 0 else None,
-                    'image': image
-                }
-                
-                # Ajouter la note à la liste
-                st.session_state['notes'].append(note)
-                
-                # Sauvegarder les données
-                save_data(st.session_state['plants'], st.session_state['notes'])
-                
-                st.success("Note ajoutée avec succès !")
+                    # Ajouter la note à la liste
+                    st.session_state['notes'].append(note)
+                    
+                    # Sauvegarder les données
+                    save_data(st.session_state['plants'], st.session_state['notes'])
+                    
+                    st.success("Note ajoutée avec succès !")
                 
                 # Recharger la page pour afficher la nouvelle note
                 st.experimental_rerun()
