@@ -307,7 +307,7 @@ elif nav_option == "Mes Plantes":
                             if action_cols[0].button(f"Ajouter une note", key=f"add_note_{plant['id']}"):
                                 st.session_state['selected_plant_id'] = plant['id']
                                 st.session_state['nav_option'] = "Notes"
-                                st.experimental_rerun()
+                                st.rerun()
                             
                             # Bouton pour supprimer la plante
                             if action_cols[1].button(f"Supprimer", key=f"delete_{plant['id']}"):
@@ -322,7 +322,7 @@ elif nav_option == "Mes Plantes":
                                     # Sauvegarder les données
                                     save_data(st.session_state['plants'], st.session_state['notes'])
                                     st.success(f"Plante {plant['name']} supprimée avec succès !")
-                                    st.experimental_rerun()
+                                    st.rerun()
                             
                             st.divider()
 
@@ -388,7 +388,7 @@ elif nav_option == "Ajouter une Plante":
             # Option pour ajouter une autre plante ou retourner à la liste
             if st.button("Voir la liste des plantes"):
                 st.session_state['nav_option'] = "Mes Plantes"
-                st.experimental_rerun()
+                st.rerun()
 
 # Section Notes
 elif nav_option == "Notes":
@@ -472,7 +472,7 @@ elif nav_option == "Notes":
                     st.success("Note ajoutée avec succès !")
                 
                 # Recharger la page pour afficher la nouvelle note
-                st.experimental_rerun()
+                st.rerun()
     
     # Journal d'Observations
     st.subheader("Journal d'Observations")
@@ -517,7 +517,7 @@ elif nav_option == "Notes":
                         st.session_state['notes'] = [n for n in notes if n['id'] != note['id']]
                         save_data(st.session_state['plants'], st.session_state['notes'])
                         st.success("Note supprimée !")
-                        st.experimental_rerun()
+                        st.rerun()
                 
                 st.divider()
 
