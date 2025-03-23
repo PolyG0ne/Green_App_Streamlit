@@ -100,7 +100,7 @@ def display_image(image_data):
             content_type = image_data.split(';')[0].split(':')[1]
             image_bytes = base64.b64decode(image_data.split(',')[1])
             image = Image.open(io.BytesIO(image_bytes))
-            st.image(image, use_column_width=True)
+            st.image(image, use_container_width=True)
         else:
             st.image(image_data, use_column_width=True)
 
