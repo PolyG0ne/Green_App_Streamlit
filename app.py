@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
@@ -96,9 +96,13 @@ def display_image(image_data):
     """Afficher une image depuis des données base64"""
     if image_data:
         if isinstance(image_data, str) and image_data.startswith('data:'):
-            st.image(image_data)
+            # Pour les images en base64, extraire les données et le type
+            content_type = image_data.split(';')[0].split(':')[1]
+            image_bytes = base64.b64decode(image_data.split(',')[1])
+            image = Image.open(io.BytesIO(image_bytes))
+            st.image(image, use_column_width=True)
         else:
-            st.image(image_data)
+            st.image(image_data, use_column_width=True)
 
 # Initialisation de l'état de session
 if 'plants' not in st.session_state:
@@ -109,72 +113,10 @@ else:
     plants = st.session_state['plants']
     notes = st.session_state['notes']
 
-# Styles CSS personnalisés
-st.markdown("""
-<style>
-    .main-header {
-        color: #2E7D32;
-        text-align: center;
-        padding: 1rem 0;
-        margin-bottom: 2rem;
-    }
-    
-    .plant-card {
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-    
-    .card-header {
-        background-color: #8BC34A;
-        color: white;
-        padding: 0.7rem;
-        border-radius: 8px 8px 0 0;
-        margin: -1rem -1rem 1rem -1rem;
-        font-weight: bold;
-    }
-    
-    .plant-details strong {
-        color: #2E7D32;
-    }
-    
-    .stat-tag {
-        background-color: #E8F5E9;
-        padding: 0.3rem 0.6rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        display: inline-block;
-        margin-right: 0.5rem;
-    }
-    
-    .note-entry {
-        border-left: 3px solid #8BC34A;
-        padding-left: 1rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .note-date {
-        color: #666;
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .centered {
-        text-align: center;
-    }
-    
-    hr {
-        margin: 2rem 0;
-        border-color: #E8F5E9;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Entête de la page
-st.markdown("<h1 class='main-header'>Journal de Bord du Jardin</h1>", unsafe_allow_html=True)
-st.markdown("<p class='centered'>Suivez toutes vos plantations et leur progression</p>", unsafe_allow_html=True)
+# Entête de la page avec style personnalisé
+st.title("Journal de Bord du Jardin")
+st.caption("Suivez toutes vos plantations et leur progression")
+st.divider()
 
 # Navigation principale
 nav_option = st.sidebar.radio(
@@ -206,38 +148,35 @@ if nav_option == "Tableau de bord":
         
         for i, plant in enumerate(recent_plants):
             with cols[i]:
-                st.markdown(f"<div class='plant-card'>", unsafe_allow_html=True)
-                st.markdown(f"<div class='card-header'>{plant['name']} ({plant.get('variety', 'Variété non spécifiée')})</div>", unsafe_allow_html=True)
-                
-                plant_notes = get_notes_for_plant(notes, plant['id'])
-                last_note = None
-                
-                if plant_notes:
-                    last_note = sorted(plant_notes, key=lambda x: x['date'], reverse=True)[0]
-                
-                if 'image' in plant and plant['image']:
-                    display_image(plant['image'])
-                elif last_note and 'image' in last_note and last_note['image']:
-                    display_image(last_note['image'])
-                
-                st.markdown(f"""
-                <div class='plant-details'>
-                    <p><strong>Date de plantation:</strong> {format_date(plant['date'])}</p>
-                    <p><strong>Contenant:</strong> {get_container_name(plant['container'])}</p>
-                    <p><strong>Terreau:</strong> {plant.get('soil', 'Non spécifié')}</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                if last_note:
-                    stats_html = "<div class='plant-stats'>"
-                    if 'height' in last_note and last_note['height']:
-                        stats_html += f"<span class='stat-tag'>Hauteur: {last_note['height']} cm</span>"
-                    if 'leaves' in last_note and last_note['leaves']:
-                        stats_html += f"<span class='stat-tag'>Feuilles: {last_note['leaves']}</span>"
-                    stats_html += "</div>"
-                    st.markdown(stats_html, unsafe_allow_html=True)
-                
-                st.markdown("</div>", unsafe_allow_html=True)
+                with st.container():
+                    # Créer un expander pour chaque plante
+                    with st.expander(f"{plant['name']} ({plant.get('variety', 'Variété non spécifiée')})", expanded=True):
+                        plant_notes = get_notes_for_plant(notes, plant['id'])
+                        last_note = None
+                        
+                        if plant_notes:
+                            last_note = sorted(plant_notes, key=lambda x: x['date'], reverse=True)[0]
+                        
+                        # Afficher l'image de la plante ou de la dernière note
+                        if 'image' in plant and plant['image']:
+                            display_image(plant['image'])
+                        elif last_note and 'image' in last_note and last_note['image']:
+                            display_image(last_note['image'])
+                        
+                        # Informations principales
+                        st.write(f"**Date de plantation:** {format_date(plant['date'])}")
+                        st.write(f"**Contenant:** {get_container_name(plant['container'])}")
+                        st.write(f"**Terreau:** {plant.get('soil', 'Non spécifié')}")
+                        
+                        # Statistiques de la plante
+                        if last_note:
+                            st.write("---")
+                            stats_cols = st.columns(3)
+                            if 'height' in last_note and last_note['height']:
+                                stats_cols[0].metric("Hauteur", f"{last_note['height']} cm")
+                            if 'leaves' in last_note and last_note['leaves']:
+                                stats_cols[1].metric("Feuilles", last_note['leaves'])
+                            stats_cols[2].metric("Âge", f"{days_from_planting(plant['date'])} jours")
     
     # Notes récentes
     st.subheader("Dernières notes")
@@ -254,23 +193,22 @@ if nav_option == "Tableau de bord":
             if not plant:
                 continue
             
-            st.markdown(f"""
-            <div class='note-entry'>
-                <div class='note-date'>{format_date(note['date'])} - {plant['name']}</div>
-                <p>{note['content']}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if 'image' in note and note['image']:
-                display_image(note['image'])
-            
-            stats_html = "<div class='plant-stats'>"
-            if 'height' in note and note['height']:
-                stats_html += f"<span class='stat-tag'>Hauteur: {note['height']} cm</span>"
-            if 'leaves' in note and note['leaves']:
-                stats_html += f"<span class='stat-tag'>Feuilles: {note['leaves']}</span>"
-            stats_html += "</div>"
-            st.markdown(stats_html, unsafe_allow_html=True)
+            with st.container():
+                st.caption(f"{format_date(note['date'])} - {plant['name']}")
+                st.write(note['content'])
+                
+                if 'image' in note and note['image']:
+                    display_image(note['image'])
+                
+                # Afficher les métriques
+                if 'height' in note and note['height'] or 'leaves' in note and note['leaves']:
+                    cols = st.columns([1, 1, 3])
+                    if 'height' in note and note['height']:
+                        cols[0].metric("Hauteur", f"{note['height']} cm")
+                    if 'leaves' in note and note['leaves']:
+                        cols[1].metric("Feuilles", note['leaves'])
+                
+                st.divider()
 
 # Section Liste des Plantes
 elif nav_option == "Mes Plantes":
@@ -300,67 +238,66 @@ elif nav_option == "Mes Plantes":
                     plant = filtered_plants[i + j]
                     
                     with cols[j]:
-                        st.markdown(f"<div class='plant-card'>", unsafe_allow_html=True)
-                        st.markdown(f"<div class='card-header'>{plant['name']} ({plant.get('variety', 'Variété non spécifiée')})</div>", unsafe_allow_html=True)
-                        
-                        plant_notes = get_notes_for_plant(notes, plant['id'])
-                        last_note = None
-                        
-                        if plant_notes:
-                            last_note = sorted(plant_notes, key=lambda x: x['date'], reverse=True)[0]
-                        
-                        if 'image' in plant and plant['image']:
-                            display_image(plant['image'])
-                        elif last_note and 'image' in last_note and last_note['image']:
-                            display_image(last_note['image'])
-                        
-                        st.markdown(f"""
-                        <div class='plant-details'>
-                            <p><strong>Date de plantation:</strong> {format_date(plant['date'])}</p>
-                            <p><strong>Contenant:</strong> {get_container_name(plant['container'])}</p>
-                            <p><strong>Terreau:</strong> {plant.get('soil', 'Non spécifié')}</p>
-                            <p><strong>Emplacement:</strong> {plant.get('location', 'Non spécifié')}</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        if plant.get('notes'):
-                            st.markdown(f"<p><strong>Notes:</strong> {plant['notes']}</p>", unsafe_allow_html=True)
-                        
-                        if last_note:
-                            stats_html = "<div class='plant-stats'>"
-                            if 'height' in last_note and last_note['height']:
-                                stats_html += f"<span class='stat-tag'>Hauteur: {last_note['height']} cm</span>"
-                            if 'leaves' in last_note and last_note['leaves']:
-                                stats_html += f"<span class='stat-tag'>Feuilles: {last_note['leaves']}</span>"
-                            stats_html += f"<span class='stat-tag'>Âge: {days_from_planting(plant['date'])} jours</span>"
-                            stats_html += "</div>"
-                            st.markdown(stats_html, unsafe_allow_html=True)
-                        
-                        # Boutons d'action
-                        col1, col2 = st.columns(2)
-                        
-                        # Bouton pour ajouter une note
-                        if col1.button(f"Ajouter une note", key=f"add_note_{plant['id']}"):
-                            st.session_state['selected_plant_id'] = plant['id']
-                            # Redirection vers la page des notes
-                            st.experimental_rerun()
-                        
-                        # Bouton pour supprimer la plante
-                        if col2.button(f"Supprimer", key=f"delete_{plant['id']}"):
-                            # Demander confirmation
-                            confirm = st.checkbox(f"Confirmer la suppression de {plant['name']}", key=f"confirm_{plant['id']}")
+                        with st.container():
+                            # En-tête avec fond coloré
+                            st.subheader(f"{plant['name']} ({plant.get('variety', 'Variété non spécifiée')})")
                             
-                            if confirm:
-                                # Supprimer les notes associées
-                                st.session_state['notes'] = [note for note in notes if note['plantId'] != plant['id']]
-                                # Supprimer la plante
-                                st.session_state['plants'] = [p for p in plants if p['id'] != plant['id']]
-                                # Sauvegarder les données
-                                save_data(st.session_state['plants'], st.session_state['notes'])
-                                st.success(f"Plante {plant['name']} supprimée avec succès !")
+                            plant_notes = get_notes_for_plant(notes, plant['id'])
+                            last_note = None
+                            
+                            if plant_notes:
+                                last_note = sorted(plant_notes, key=lambda x: x['date'], reverse=True)[0]
+                            
+                            # Afficher l'image
+                            if 'image' in plant and plant['image']:
+                                display_image(plant['image'])
+                            elif last_note and 'image' in last_note and last_note['image']:
+                                display_image(last_note['image'])
+                            
+                            # Informations de la plante
+                            st.write(f"**Date de plantation:** {format_date(plant['date'])}")
+                            st.write(f"**Contenant:** {get_container_name(plant['container'])}")
+                            st.write(f"**Terreau:** {plant.get('soil', 'Non spécifié')}")
+                            st.write(f"**Emplacement:** {plant.get('location', 'Non spécifié')}")
+                            
+                            if plant.get('notes'):
+                                st.write(f"**Notes:** {plant['notes']}")
+                            
+                            # Statistiques
+                            if last_note:
+                                st.write("---")
+                                stat_cols = st.columns(3)
+                                if 'height' in last_note and last_note['height']:
+                                    stat_cols[0].metric("Hauteur", f"{last_note['height']} cm")
+                                if 'leaves' in last_note and last_note['leaves']:
+                                    stat_cols[1].metric("Feuilles", last_note['leaves'])
+                                stat_cols[2].metric("Âge", f"{days_from_planting(plant['date'])} jours")
+                            
+                            # Boutons d'action
+                            action_cols = st.columns(2)
+                            
+                            # Bouton pour ajouter une note
+                            if action_cols[0].button(f"Ajouter une note", key=f"add_note_{plant['id']}"):
+                                st.session_state['selected_plant_id'] = plant['id']
+                                st.session_state['nav_option'] = "Notes"
                                 st.experimental_rerun()
-                        
-                        st.markdown("</div>", unsafe_allow_html=True)
+                            
+                            # Bouton pour supprimer la plante
+                            if action_cols[1].button(f"Supprimer", key=f"delete_{plant['id']}"):
+                                # Demander confirmation
+                                confirm = st.checkbox(f"Confirmer la suppression de {plant['name']}", key=f"confirm_{plant['id']}")
+                                
+                                if confirm:
+                                    # Supprimer les notes associées
+                                    st.session_state['notes'] = [note for note in notes if note['plantId'] != plant['id']]
+                                    # Supprimer la plante
+                                    st.session_state['plants'] = [p for p in plants if p['id'] != plant['id']]
+                                    # Sauvegarder les données
+                                    save_data(st.session_state['plants'], st.session_state['notes'])
+                                    st.success(f"Plante {plant['name']} supprimée avec succès !")
+                                    st.experimental_rerun()
+                            
+                            st.divider()
 
 # Section Ajouter une Plante
 elif nav_option == "Ajouter une Plante":
@@ -521,36 +458,33 @@ elif nav_option == "Notes":
             if not plant:
                 continue
             
-            col1, col2 = st.columns([5, 1])
-            
-            with col1:
-                st.markdown(f"""
-                <div class='note-entry'>
-                    <div class='note-date'>{format_date(note['date'])} - {plant['name']}</div>
-                    <p>{note['content']}</p>
-                </div>
-                """, unsafe_allow_html=True)
+            with st.container():
+                col1, col2 = st.columns([5, 1])
                 
-                if 'image' in note and note['image']:
-                    display_image(note['image'])
+                with col1:
+                    st.caption(f"{format_date(note['date'])} - {plant['name']}")
+                    st.write(note['content'])
+                    
+                    if 'image' in note and note['image']:
+                        display_image(note['image'])
+                    
+                    # Afficher les métriques
+                    if 'height' in note and note['height'] or 'leaves' in note and note['leaves']:
+                        metric_cols = st.columns([1, 1, 3])
+                        if 'height' in note and note['height']:
+                            metric_cols[0].metric("Hauteur", f"{note['height']} cm")
+                        if 'leaves' in note and note['leaves']:
+                            metric_cols[1].metric("Feuilles", note['leaves'])
                 
-                stats_html = "<div class='plant-stats'>"
-                if 'height' in note and note['height']:
-                    stats_html += f"<span class='stat-tag'>Hauteur: {note['height']} cm</span>"
-                if 'leaves' in note and note['leaves']:
-                    stats_html += f"<span class='stat-tag'>Feuilles: {note['leaves']}</span>"
-                stats_html += "</div>"
-                st.markdown(stats_html, unsafe_allow_html=True)
-            
-            with col2:
-                # Bouton pour supprimer la note
-                if st.button("Supprimer", key=f"delete_note_{note['id']}"):
-                    st.session_state['notes'] = [n for n in notes if n['id'] != note['id']]
-                    save_data(st.session_state['plants'], st.session_state['notes'])
-                    st.success("Note supprimée !")
-                    st.experimental_rerun()
-            
-            st.markdown("<hr>", unsafe_allow_html=True)
+                with col2:
+                    # Bouton pour supprimer la note
+                    if st.button("Supprimer", key=f"delete_note_{note['id']}"):
+                        st.session_state['notes'] = [n for n in notes if n['id'] != note['id']]
+                        save_data(st.session_state['plants'], st.session_state['notes'])
+                        st.success("Note supprimée !")
+                        st.experimental_rerun()
+                
+                st.divider()
 
 # Section Statistiques
 elif nav_option == "Statistiques":
