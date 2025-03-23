@@ -23,17 +23,20 @@ st.set_page_config(
 # Fonctions utilitaires
 def load_data():
     """Charger les données depuis les fichiers JSON"""
-    if os.path.exists('garden_plants.json'):
-        with open('garden_plants.json', 'r', encoding='utf-8') as f:
-            plants = json.load(f)
-    else:
-        plants = []
+    plants = []
+    notes = []
     
-    if os.path.exists('garden_notes.json'):
-        with open('garden_notes.json', 'r', encoding='utf-8') as f:
-            notes = json.load(f)
-    else:
-        notes = []
+    try:
+        if os.path.exists('garden_plants.json'):
+            with open('garden_plants.json', 'r', encoding='utf-8') as f:
+                plants = json.load(f)
+        
+        if os.path.exists('garden_notes.json'):
+            with open('garden_notes.json', 'r', encoding='utf-8') as f:
+                notes = json.load(f)
+    except Exception as e:
+        st.error(f"Erreur lors du chargement des données. Création d'un nouveau journal.")
+        print(f"Erreur de chargement: {str(e)}")
     
     return plants, notes
 
@@ -132,10 +135,14 @@ def display_image(image_data):
             st.image(image_data, use_column_width=True)
 
 # Initialisation de l'état de session
-if 'plants' not in st.session_state:
+if 'init' not in st.session_state:
+    st.session_state['init'] = True
     plants, notes = load_data()
     st.session_state['plants'] = plants
     st.session_state['notes'] = notes
+    # Pour gérer la navigation entre sections
+    if 'nav_option' not in st.session_state:
+        st.session_state['nav_option'] = "Tableau de bord"
 else:
     plants = st.session_state['plants']
     notes = st.session_state['notes']
@@ -146,10 +153,38 @@ st.caption("Suivez toutes vos plantations et leur progression")
 st.divider()
 
 # Navigation principale
-nav_option = st.sidebar.radio(
-    "Navigation",
-    ["Tableau de bord", "Mes Plantes", "Ajouter une Plante", "Notes", "Statistiques"]
-)
+if 'nav_option' in st.session_state:
+    nav_option = st.session_state['nav_option']
+else:
+    nav_option = st.sidebar.radio(
+        "Navigation",
+        ["Tableau de bord", "Mes Plantes", "Ajouter une Plante", "Notes", "Statistiques"]
+    )
+    st.session_state['nav_option'] = nav_option
+
+# Boutons de navigation dans la sidebar (toujours visibles)
+with st.sidebar:
+    st.write("## Navigation")
+    
+    if st.button("Tableau de bord", use_container_width=True):
+        st.session_state['nav_option'] = "Tableau de bord"
+        st.rerun()
+        
+    if st.button("Mes Plantes", use_container_width=True):
+        st.session_state['nav_option'] = "Mes Plantes"
+        st.rerun()
+        
+    if st.button("Ajouter une Plante", use_container_width=True):
+        st.session_state['nav_option'] = "Ajouter une Plante"
+        st.rerun()
+        
+    if st.button("Notes", use_container_width=True):
+        st.session_state['nav_option'] = "Notes"
+        st.rerun()
+        
+    if st.button("Statistiques", use_container_width=True):
+        st.session_state['nav_option'] = "Statistiques"
+        st.rerun()
 
 # Section Tableau de bord
 if nav_option == "Tableau de bord":
@@ -388,7 +423,7 @@ elif nav_option == "Ajouter une Plante":
             # Option pour ajouter une autre plante ou retourner à la liste
             if st.button("Voir la liste des plantes"):
                 st.session_state['nav_option'] = "Mes Plantes"
-                st.rerun()
+                st.experimental_rerun()
 
 # Section Notes
 elif nav_option == "Notes":
@@ -472,7 +507,7 @@ elif nav_option == "Notes":
                     st.success("Note ajoutée avec succès !")
                 
                 # Recharger la page pour afficher la nouvelle note
-                st.rerun()
+                st.experimental_rerun()
     
     # Journal d'Observations
     st.subheader("Journal d'Observations")
@@ -699,5 +734,11 @@ elif nav_option == "Statistiques":
                 else:
                     st.info("Pas de données de variété disponibles.")
 
-# Mettre à jour les données automatiquement
-save_data(st.session_state['plants'], st.session_state['notes'])
+# Mettre à jour les données automatiquement (à la fin du script)
+try:
+    if 'plants' in st.session_state and 'notes' in st.session_state:
+        save_result = save_data(st.session_state['plants'], st.session_state['notes'])
+        if not save_result:
+            st.sidebar.warning("⚠️ Problème lors de la sauvegarde automatique des données")
+except Exception as e:
+    st.sidebar.error("Erreur de sauvegarde")
