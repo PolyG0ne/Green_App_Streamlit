@@ -39,11 +39,16 @@ def load_data():
 
 def save_data(plants, notes):
     """Sauvegarder les données dans des fichiers JSON"""
-    with open('garden_plants.json', 'w', encoding='utf-8') as f:
-        json.dump(plants, f, ensure_ascii=False, indent=4)
-    
-    with open('garden_notes.json', 'w', encoding='utf-8') as f:
-        json.dump(notes, f, ensure_ascii=False, indent=4)
+    try:
+        with open('garden_plants.json', 'w', encoding='utf-8') as f:
+            json.dump(plants, f, ensure_ascii=False, indent=4)
+        
+        with open('garden_notes.json', 'w', encoding='utf-8') as f:
+            json.dump(notes, f, ensure_ascii=False, indent=4)
+        return True
+    except Exception as e:
+        print(f"Erreur lors de la sauvegarde des données: {str(e)}")
+        return False
 
 def format_date(date_string):
     """Formater une date pour l'affichage"""
@@ -85,11 +90,33 @@ def generate_unique_id():
     return str(uuid.uuid4())
 
 def handle_image_upload(uploaded_file):
-    """Gérer l'upload d'une image et la convertir en base64"""
+    """Gérer l'upload d'une image et la convertir en base64 avec redimensionnement"""
     if uploaded_file is not None:
-        bytes_data = uploaded_file.getvalue()
-        encoded = base64.b64encode(bytes_data).decode()
-        return f"data:{uploaded_file.type};base64,{encoded}"
+        try:
+            # Ouvrir l'image avec PIL
+            img = Image.open(uploaded_file)
+            
+            # Redimensionner l'image pour réduire sa taille
+            max_size = (800, 800)  # Taille maximale
+            img.thumbnail(max_size, Image.LANCZOS)
+            
+            # Convertir en RGB si nécessaire (pour les images PNG avec transparence)
+            if img.mode in ('RGBA', 'LA'):
+                background = Image.new(img.mode[:-1], img.size, (255, 255, 255))
+                background.paste(img, img.split()[-1])
+                img = background
+            
+            # Sauvegarder dans un buffer avec une qualité réduite
+            buffer = io.BytesIO()
+            img.save(buffer, format="JPEG", quality=85, optimize=True)
+            buffer.seek(0)
+            
+            # Convertir en base64
+            img_str = base64.b64encode(buffer.getvalue()).decode()
+            return f"data:image/jpeg;base64,{img_str}"
+        except Exception as e:
+            st.warning(f"Problème lors du traitement de l'image. L'image ne sera pas enregistrée.")
+            return None
     return None
 
 def display_image(image_data):
