@@ -49,7 +49,12 @@ def save_data(plants, notes):
         with open('garden_notes.json', 'w', encoding='utf-8') as f:
             json.dump(notes, f, ensure_ascii=False, indent=4)
         return True
+    except PermissionError:
+        st.error("Erreur de permission : l'application n'a pas les droits d'écriture nécessaires.")
+        print("Erreur de permission lors de la sauvegarde des données")
+        return False
     except Exception as e:
+        st.error(f"Erreur lors de la sauvegarde des données: {str(e)}")
         print(f"Erreur lors de la sauvegarde des données: {str(e)}")
         return False
 
